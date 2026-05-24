@@ -1,17 +1,18 @@
 # scorm-kit
 
-**An opinionated SCORM 1.2 build pipeline for teams that ship.** One CLI, seven subcommands, written because the existing ecosystem stops at "publish from Storyline and pray."
+**An opinionated SCORM / cmi5 / xAPI build pipeline for teams that ship.** One CLI, eight subcommands, written because the existing ecosystem stops at "publish from Storyline and pray."
 
 ```bash
 npm install -g scorm-kit
 
-scorm-kit lint    course.zip    # static analysis: manifest, API, asset refs
-scorm-kit a11y    course.zip    # WCAG 2.2 AA static audit
-scorm-kit diff    before.zip after.zip   # structured diff for PR review
-scorm-kit i18n    course.zip --strings strings.json   # bundle a translation pack
-scorm-kit mock    course.zip    # local LMS for testing without Moodle
-scorm-kit rum     course.zip --endpoint https://rum.example.com/ingest   # inject RUM
-scorm-kit privacy course.zip    # PII / data-leak static audit
+scorm-kit lint     course.zip    # static analysis: manifest, API, asset refs
+scorm-kit a11y     course.zip    # WCAG 2.2 AA static audit
+scorm-kit diff     before.zip after.zip   # structured diff for PR review
+scorm-kit i18n     course.zip --strings strings.json   # bundle a translation pack
+scorm-kit mock     course.zip    # local LMS for testing without Moodle
+scorm-kit rum      course.zip --endpoint https://rum.example.com/ingest   # inject RUM
+scorm-kit privacy  course.zip    # PII / data-leak static audit
+scorm-kit cmi5     validate|lint|convert ...   # cmi5 validator + SCORM→cmi5 wrapper
 ```
 
 Exit codes are conventional: `0` clean, `1` warnings only, `2` errors. Every command supports `--json` for CI pipelines.
@@ -47,6 +48,14 @@ A local SCORM 1.2 runtime — tiny HTTP server, iframe shell, full `window.API` 
 ### `scorm-kit rum <package> --endpoint <url>`
 
 Injects a Real User Monitoring runtime. Captures navigation timing, resource-load failures, JS errors, long tasks, and slide transitions; batches and POSTs as JSON beacons. The signal an LMS has never offered. Pair with `cmi.core.student_id` as the actor (or pseudonymise upstream).
+
+### `scorm-kit cmi5 <validate|lint|convert> <package>`
+
+cmi5 is the 2016 ADL spec that replaces SCORM 1.2 for new builds — SCORM-style "launch and handshake" with xAPI-based tracking. Most enterprise LMS RFPs in 2026 require cmi5 support.
+
+- `cmi5 validate <pkg>` — structural validation: `cmi5.xml` shape, root `courseStructure` + namespace, `<course>` and `<au>` required attributes, `launchMethod`/`moveOn` enums, `masteryScore` range, IRI shape on ids and `activityType`, AU launch URLs resolve inside the package.
+- `cmi5 lint <pkg>` — validate plus interop checks: unique ids, no duplicate launch URLs, `en` langstring present (LMSs default to en and show blank otherwise), ISO-8601 `duration`, namespaced extension keys, `waivedMoveOnConditions` consistent with `moveOn`.
+- `cmi5 convert <scorm.zip> --out <cmi5.zip>` — wraps a SCORM 1.2 package as cmi5 by generating `cmi5.xml` that references the SCORM SCO's launch HTML as the cmi5 AU. The SCORM API stays in place, so the package degrades gracefully if launched from a SCORM-only LMS. This is the **dual-stream** pattern most teams now use: SCORM for HR completion records, cmi5/xAPI for behavioural data.
 
 ### `scorm-kit privacy <package>`
 

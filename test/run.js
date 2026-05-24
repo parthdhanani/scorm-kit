@@ -42,7 +42,7 @@ function test(name, fn) { tests.push({ name: name, fn: fn }); }
 test("dispatcher: --help exits 0 and lists all subcommands", function () {
   var r = run(["--help"]);
   assert.strictEqual(r.code, 0);
-  ["lint", "a11y", "diff", "i18n", "mock", "rum", "privacy"].forEach(function (cmd) {
+  ["lint", "a11y", "diff", "i18n", "mock", "rum", "privacy", "cmi5"].forEach(function (cmd) {
     assert.ok(r.stdout.indexOf(cmd) !== -1, "help missing " + cmd);
   });
 });
@@ -228,6 +228,82 @@ test("privacy: detects xAPI plaintext mbox", function () {
   var rules = data.findings.map(function (f) { return f.rule; });
   assert.ok(rules.indexOf("xapi-actor-mbox-plain") !== -1,
     "missing xapi-actor-mbox-plain: " + rules.join(","));
+});
+
+// ---------- cmi5 ----------
+
+test("cmi5: --help exits 0", function () {
+  var r = run(["cmi5", "--help"]);
+  assert.strictEqual(r.code, 0);
+  assert.ok(/validate.*lint.*convert/s.test(r.stdout));
+});
+
+test("cmi5 convert: wraps SCORM package and emits valid cmi5", function () {
+  var outZip = path.join(os.tmpdir(), "kit-cmi5-conv-" + process.pid + ".zip");
+  try { fs.unlinkSync(outZip); } catch (e) {}
+  var r = run(["cmi5", "convert", ZIP_EN, "--out", outZip]);
+  assert.strictEqual(r.code, 0, "convert failed: " + r.stderr);
+  assert.ok(fs.existsSync(outZip), "cmi5 zip not produced");
+  // validate the converted package
+  var v = run(["cmi5", "validate", outZip]);
+  assert.strictEqual(v.code, 0, "converted package failed validate: " + v.stdout);
+  try { fs.unlinkSync(outZip); } catch (e) {}
+});
+
+test("cmi5 validate: missing cmi5.xml fires cmi5-missing error", function () {
+  var tmp = fs.mkdtempSync(path.join(os.tmpdir(), "kit-cmi5-empty-"));
+  fs.writeFileSync(path.join(tmp, "index.html"), "<html></html>");
+  var r = run(["cmi5", "validate", tmp, "--json"]);
+  assert.strictEqual(r.code, 2);
+  var data = JSON.parse(r.stdout);
+  assert.strictEqual(data.findings[0].rule, "cmi5-missing");
+});
+
+test("cmi5 validate: catches bad launchMethod, bad moveOn, bad IRI, bad masteryScore, missing URL target", function () {
+  var tmp = fs.mkdtempSync(path.join(os.tmpdir(), "kit-cmi5-bad-"));
+  fs.writeFileSync(path.join(tmp, "cmi5.xml"),
+    '<?xml version="1.0"?>\n' +
+    '<courseStructure xmlns="https://w3id.org/xapi/profiles/cmi5/v1">\n' +
+    '  <course id="not-an-iri">\n' +
+    '    <title><langstring lang="en">x</langstring></title>\n' +
+    '  </course>\n' +
+    '  <au id="urn:test:1" launchMethod="Wrong" moveOn="Maybe" masteryScore="2.0">\n' +
+    '    <title><langstring lang="en">m</langstring></title>\n' +
+    '    <url>missing.html</url>\n' +
+    '  </au>\n' +
+    '</courseStructure>\n');
+  var r = run(["cmi5", "validate", tmp, "--json"]);
+  assert.strictEqual(r.code, 2);
+  var data = JSON.parse(r.stdout);
+  var rules = data.findings.map(function (f) { return f.rule; });
+  ["course-id-not-iri", "au-bad-launchmethod", "au-bad-moveon",
+   "au-mastery-out-of-range", "au-url-not-found"].forEach(function (rule) {
+    assert.ok(rules.indexOf(rule) !== -1, "missing rule " + rule + ": " + rules.join(","));
+  });
+});
+
+test("cmi5 lint: duplicate AU id fires lint-id-duplicate", function () {
+  var tmp = fs.mkdtempSync(path.join(os.tmpdir(), "kit-cmi5-dup-"));
+  fs.writeFileSync(path.join(tmp, "x.html"), "<html></html>");
+  fs.writeFileSync(path.join(tmp, "cmi5.xml"),
+    '<?xml version="1.0"?>\n' +
+    '<courseStructure xmlns="https://w3id.org/xapi/profiles/cmi5/v1">\n' +
+    '  <course id="urn:test:c">\n' +
+    '    <title><langstring lang="en">c</langstring></title>\n' +
+    '  </course>\n' +
+    '  <au id="urn:test:a" launchMethod="AnyWindow" moveOn="Passed">\n' +
+    '    <title><langstring lang="en">m</langstring></title>\n' +
+    '    <url>x.html</url>\n' +
+    '  </au>\n' +
+    '  <au id="urn:test:a" launchMethod="AnyWindow" moveOn="Passed">\n' +
+    '    <title><langstring lang="en">m2</langstring></title>\n' +
+    '    <url>x.html</url>\n' +
+    '  </au>\n' +
+    '</courseStructure>\n');
+  var r = run(["cmi5", "lint", tmp, "--json"]);
+  var data = JSON.parse(r.stdout);
+  var rules = data.findings.map(function (f) { return f.rule; });
+  assert.ok(rules.indexOf("lint-id-duplicate") !== -1, "missing lint-id-duplicate: " + rules.join(","));
 });
 
 // ---------- runner ----------
