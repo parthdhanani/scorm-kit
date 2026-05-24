@@ -1,0 +1,26 @@
+{
+  "name": "scorm-kit",
+  "version": "0.1.0",
+  "description": "Opinionated SCORM 1.2 build pipeline: lint, a11y, diff, i18n, mock, rum.",
+  "bin": {
+    "scorm-kit": "bin/scorm-kit.js"
+  },
+  "scripts": {
+    "test": "node test/run.js"
+  },
+  "keywords": ["scorm", "scorm-1.2", "elearning", "lms", "cli", "lint", "wcag", "a11y", "xapi"],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/parthdhanani/scorm-kit"
+  }
+}

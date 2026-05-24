@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>scorm-mock-lms</title>
+  <link rel="stylesheet" href="/assets/mock-lms.css">
+  <script src="/assets/mock-lms.js"></script>
+</head>
+<body>
+  <header>
+    <strong>scorm-mock-lms</strong>
+    <span class="state" id="state">disconnected</span>
+    <span class="spacer"></span>
+    <label class="fail">
+      Fault inject:
+      <select id="fail-mode">
+        <option value="none">none</option>
+        <option value="set">LMSSetValue → "false"</option>
+        <option value="init">LMSInitialize → "false"</option>
+        <option value="commit">LMSCommit → "false"</option>
+        <option value="finish">LMSFinish → "false"</option>
+      </select>
+    </label>
+    <button id="restart">Restart</button>
+    <button id="clear">Clear log</button>
+    <button id="export">Export JSON</button>
+  </header>
+
+  <main>
+    <section class="course">
+      <iframe id="course" title="SCORM course"></iframe>
+    </section>
+    <aside class="panel">
+      <nav class="tabs">
+        <button data-tab="log" class="active">Call log</button>
+        <button data-tab="cmi">CMI state</button>
+      </nav>
+      <div class="tab-body">
+        <div id="tab-log" class="tab-pane active">
+          <div class="log-toolbar">
+            <input type="search" id="filter" placeholder="filter by method or key…">
+            <span id="log-count" class="count">0 calls</span>
+          </div>
+          <ol id="log" class="log"></ol>
+        </div>
+        <div id="tab-cmi" class="tab-pane">
+          <pre id="cmi"></pre>
+        </div>
+      </div>
+    </aside>
+  </main>
+</body>
+</html>
