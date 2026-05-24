@@ -1,14 +1,14 @@
 {
   "name": "scorm-kit",
-  "version": "0.1.0",
-  "description": "Opinionated SCORM 1.2 build pipeline: lint, a11y, diff, i18n, mock, rum.",
+  "version": "0.2.0",
+  "description": "Opinionated SCORM / cmi5 / xAPI build pipeline: lint, a11y, diff, i18n, mock, rum, privacy audit, cmi5 validator + SCORM→cmi5 wrapper.",
   "bin": {
     "scorm-kit": "bin/scorm-kit.js"
   },
   "scripts": {
     "test": "node test/run.js"
   },
-  "keywords": ["scorm", "scorm-1.2", "elearning", "lms", "cli", "lint", "wcag", "a11y", "xapi"],
+  "keywords": ["scorm", "scorm-1.2", "cmi5", "xapi", "elearning", "lms", "cli", "lint", "wcag", "a11y", "privacy", "learning-engineering"],
   "license": "MIT",
   "engines": {
     "node": ">=18"

@@ -1,5 +1,11 @@
 # scorm-kit
 
+[![tests](https://github.com/parthdhanani/scorm-kit/actions/workflows/test.yml/badge.svg)](https://github.com/parthdhanani/scorm-kit/actions/workflows/test.yml)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![node](https://img.shields.io/badge/node-%E2%89%A518-brightgreen.svg)](https://nodejs.org)
+[![tests](https://img.shields.io/badge/tests-27%2F27-brightgreen.svg)](test/run.js)
+[![runtime deps](https://img.shields.io/badge/runtime%20deps-0-brightgreen.svg)](package.json)
+
 **An opinionated SCORM / cmi5 / xAPI build pipeline for teams that ship.** One CLI, eight subcommands, written because the existing ecosystem stops at "publish from Storyline and pray."
 
 ```bash

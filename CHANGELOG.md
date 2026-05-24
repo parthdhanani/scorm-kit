@@ -6,10 +6,16 @@ All notable changes to scorm-kit are documented here. Format follows
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-05-24
+
 ### Added
-- `scorm-kit cmi5 <validate|lint|convert>` — cmi5 v1 (ADL, 2016) package validator, linter, and SCORM 1.2 → cmi5 wrapper. Validates `cmi5.xml` shape, namespace, `<course>`/`<au>` required attributes, `launchMethod`/`moveOn` enums, `masteryScore` range, IRI shape, and AU launch URL resolution inside the package. Lint mode adds: unique-id check, duplicate-URL warning, `en` langstring check, ISO-8601 `duration`, namespaced extension keys, and `waivedMoveOnConditions` consistency. Convert mode emits `cmi5.xml` referencing the SCORM SCO as the cmi5 AU (dual-stream pattern). 5 new tests; suite now 27/27 green.
-- `scorm-kit privacy <package>` — static PII / data-leak audit. 16 rules across PII literals (email, phone, SSN, DOB), third-party trackers (GA/GTM/FB pixel/Hotjar/FullStory/Mixpanel/Segment/Amplitude/Intercom/Heap/Matomo/Datadog/NewRelic/Pendo), off-package iframes and form actions, cookie-bearing font CDNs, bearer tokens, API keys, S3 signed URLs, plaintext xAPI `mbox`, learner-id `localStorage` keys, and the `cmi.core.student_name → innerHTML` XSS pattern. `--allow host1,host2` allowlists own LMS/CDN.
-- 5 new privacy tests; suite now 22/22 green.
+- `scorm-kit cmi5 <validate|lint|convert>` — cmi5 v1 (ADL, 2016) package validator, linter, and SCORM 1.2 → cmi5 wrapper. Validates `cmi5.xml` shape, namespace, `<course>`/`<au>` required attributes, `launchMethod`/`moveOn` enums, `masteryScore` range, IRI shape, and AU launch URL resolution inside the package. Lint mode adds: unique-id check, duplicate-URL warning, `en` langstring check, ISO-8601 `duration`, namespaced extension keys, and `waivedMoveOnConditions` consistency. Convert mode emits `cmi5.xml` referencing the SCORM SCO as the cmi5 AU (dual-stream pattern). 5 new tests.
+- `scorm-kit privacy <package>` — static PII / data-leak audit. 16 rules across PII literals (email, phone, SSN, DOB), third-party trackers (GA/GTM/FB pixel/Hotjar/FullStory/Mixpanel/Segment/Amplitude/Intercom/Heap/Matomo/Datadog/NewRelic/Pendo), off-package iframes and form actions, cookie-bearing font CDNs, bearer tokens, API keys, S3 signed URLs, plaintext xAPI `mbox`, learner-id `localStorage` keys, and the `cmi.core.student_name → innerHTML` XSS pattern. `--allow host1,host2` allowlists own LMS/CDN. 5 new tests.
+- `CONTRIBUTING.md`, `SECURITY.md`, and README CI/license/Node/test badges.
+
+### Changed
+- Test suite now 27/27 green across the eight subcommands.
+- README and CLI help updated to reflect the eight-subcommand surface.
 
 ## [0.1.0] — 2026-05-20
 

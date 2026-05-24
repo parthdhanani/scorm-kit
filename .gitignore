@@ -5,3 +5,6 @@ node_modules/
 .env
 .env.local
 coverage/
+
+# Claude Code tooling
+.claudeignore
