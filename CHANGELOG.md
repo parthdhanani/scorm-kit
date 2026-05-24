@@ -4,6 +4,12 @@ All notable changes to scorm-kit are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `scorm-kit privacy <package>` — static PII / data-leak audit. 16 rules across PII literals (email, phone, SSN, DOB), third-party trackers (GA/GTM/FB pixel/Hotjar/FullStory/Mixpanel/Segment/Amplitude/Intercom/Heap/Matomo/Datadog/NewRelic/Pendo), off-package iframes and form actions, cookie-bearing font CDNs, bearer tokens, API keys, S3 signed URLs, plaintext xAPI `mbox`, learner-id `localStorage` keys, and the `cmi.core.student_name → innerHTML` XSS pattern. `--allow host1,host2` allowlists own LMS/CDN.
+- 5 new privacy tests; suite now 22/22 green.
+
 ## [0.1.0] — 2026-05-20
 
 Initial public release. Six subcommands extracted from a production SCORM

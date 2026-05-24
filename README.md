@@ -1,16 +1,17 @@
 # scorm-kit
 
-**An opinionated SCORM 1.2 build pipeline for teams that ship.** One CLI, six subcommands, written because the existing ecosystem stops at "publish from Storyline and pray."
+**An opinionated SCORM 1.2 build pipeline for teams that ship.** One CLI, seven subcommands, written because the existing ecosystem stops at "publish from Storyline and pray."
 
 ```bash
 npm install -g scorm-kit
 
-scorm-kit lint course.zip       # static analysis: manifest, API, asset refs
-scorm-kit a11y course.zip       # WCAG 2.2 AA static audit
-scorm-kit diff before.zip after.zip   # structured diff for PR review
-scorm-kit i18n course.zip --strings strings.json   # bundle a translation pack
-scorm-kit mock course.zip       # local LMS for testing without Moodle
-scorm-kit rum  course.zip --endpoint https://rum.example.com/ingest   # inject RUM
+scorm-kit lint    course.zip    # static analysis: manifest, API, asset refs
+scorm-kit a11y    course.zip    # WCAG 2.2 AA static audit
+scorm-kit diff    before.zip after.zip   # structured diff for PR review
+scorm-kit i18n    course.zip --strings strings.json   # bundle a translation pack
+scorm-kit mock    course.zip    # local LMS for testing without Moodle
+scorm-kit rum     course.zip --endpoint https://rum.example.com/ingest   # inject RUM
+scorm-kit privacy course.zip    # PII / data-leak static audit
 ```
 
 Exit codes are conventional: `0` clean, `1` warnings only, `2` errors. Every command supports `--json` for CI pipelines.
@@ -46,6 +47,10 @@ A local SCORM 1.2 runtime — tiny HTTP server, iframe shell, full `window.API` 
 ### `scorm-kit rum <package> --endpoint <url>`
 
 Injects a Real User Monitoring runtime. Captures navigation timing, resource-load failures, JS errors, long tasks, and slide transitions; batches and POSTs as JSON beacons. The signal an LMS has never offered. Pair with `cmi.core.student_id` as the actor (or pseudonymise upstream).
+
+### `scorm-kit privacy <package>`
+
+Static PII / data-leak audit. Catches the leaks a procurement-grade compliance review would flag and your courseware vendors won't tell you about: hard-coded emails, phone numbers, SSN/DOB patterns, third-party trackers (GA/GTM/Hotjar/FullStory/Mixpanel/Segment/Amplitude/etc.), font CDNs that set cookies, off-package iframes and form actions, bearer tokens and API keys checked into the bundle, S3 signed URLs, plaintext xAPI `mbox`, learner-id keys used as `localStorage` keys, and the classic `cmi.core.student_name → innerHTML` XSS vector. Allowlist your own LMS/CDN with `--allow lms.example.com,cdn.example.com`. Pair with `lint` and `a11y` in CI for an opinionated three-pass build gate.
 
 ## What scorm-kit is not
 

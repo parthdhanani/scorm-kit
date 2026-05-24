@@ -42,7 +42,7 @@ function test(name, fn) { tests.push({ name: name, fn: fn }); }
 test("dispatcher: --help exits 0 and lists all subcommands", function () {
   var r = run(["--help"]);
   assert.strictEqual(r.code, 0);
-  ["lint", "a11y", "diff", "i18n", "mock", "rum"].forEach(function (cmd) {
+  ["lint", "a11y", "diff", "i18n", "mock", "rum", "privacy"].forEach(function (cmd) {
     assert.ok(r.stdout.indexOf(cmd) !== -1, "help missing " + cmd);
   });
 });
@@ -160,6 +160,74 @@ test("rum: --dry-run with endpoint succeeds", function () {
   var r = run(["rum", ZIP_EN, "--endpoint", "https://example.com/ingest", "--dry-run"]);
   // dry-run should not error; either prints a plan or exits 0
   assert.ok(!/TypeError|ReferenceError/.test(r.stderr));
+});
+
+// ---------- privacy ----------
+
+test("privacy: storycraft-built package is clean", function () {
+  var r = run(["privacy", ZIP_EN]);
+  assert.strictEqual(r.code, 0, "expected 0, got " + r.code + ": " + r.stderr);
+  assert.ok(/no privacy findings|0 error/.test(r.stdout));
+});
+
+test("privacy: --json output is parseable", function () {
+  var r = run(["privacy", ZIP_EN, "--json"]);
+  assert.strictEqual(r.code, 0);
+  var data = JSON.parse(r.stdout);
+  assert.ok(Array.isArray(data.findings));
+  assert.ok(data.counts && typeof data.counts.error === "number");
+});
+
+test("privacy: detects tracker, email, name-into-innerHTML, external form", function () {
+  var tmp = fs.mkdtempSync(path.join(os.tmpdir(), "kit-priv-"));
+  fs.writeFileSync(path.join(tmp, "imsmanifest.xml"),
+    '<?xml version="1.0"?><manifest><resources><resource href="x.html"/></resources></manifest>');
+  fs.writeFileSync(path.join(tmp, "x.html"),
+    "<html><head><title>x</title>\n" +
+    '<script src="https://www.googletagmanager.com/gtag/js?id=GA-X"></script>\n' +
+    "</head><body>\n" +
+    "<p>contact alice@acme-corp.io</p>\n" +
+    '<form action="https://forms.example.org/submit"></form>\n' +
+    "<script>document.body.innerHTML = cmi.core.student_name;</script>\n" +
+    "</body></html>");
+  var r = run(["privacy", tmp, "--json"]);
+  assert.strictEqual(r.code, 2, "expected exit 2 for error findings");
+  var data = JSON.parse(r.stdout);
+  var rules = data.findings.map(function (f) { return f.rule; });
+  assert.ok(rules.indexOf("tracker-third-party") !== -1, "missing tracker-third-party: " + rules);
+  assert.ok(rules.indexOf("pii-email-literal") !== -1, "missing pii-email-literal: " + rules);
+  assert.ok(rules.indexOf("scorm-name-into-innerhtml") !== -1, "missing scorm-name-into-innerhtml: " + rules);
+  assert.ok(rules.indexOf("form-action-external") !== -1, "missing form-action-external: " + rules);
+});
+
+test("privacy: --allow suppresses external-host findings for allowed hosts", function () {
+  var tmp = fs.mkdtempSync(path.join(os.tmpdir(), "kit-priv-allow-"));
+  fs.writeFileSync(path.join(tmp, "imsmanifest.xml"),
+    '<?xml version="1.0"?><manifest><resources><resource href="x.html"/></resources></manifest>');
+  fs.writeFileSync(path.join(tmp, "x.html"),
+    '<html><head><title>x</title></head><body>' +
+    '<iframe src="https://cdn.example.com/widget"></iframe>' +
+    '</body></html>');
+  var r = run(["privacy", tmp, "--allow", "cdn.example.com", "--json"]);
+  var data = JSON.parse(r.stdout);
+  var rules = data.findings.map(function (f) { return f.rule; });
+  assert.ok(rules.indexOf("iframe-external") === -1,
+    "iframe-external should be suppressed by --allow: " + rules.join(","));
+});
+
+test("privacy: detects xAPI plaintext mbox", function () {
+  var tmp = fs.mkdtempSync(path.join(os.tmpdir(), "kit-priv-xapi-"));
+  fs.writeFileSync(path.join(tmp, "imsmanifest.xml"),
+    '<?xml version="1.0"?><manifest><resources><resource href="x.html"/></resources></manifest>');
+  fs.writeFileSync(path.join(tmp, "x.html"),
+    '<html><head><title>x</title></head><body>' +
+    '<script>var actor = { "mbox": "mailto:learner@acme-corp.io" };</script>' +
+    '</body></html>');
+  var r = run(["privacy", tmp, "--json"]);
+  var data = JSON.parse(r.stdout);
+  var rules = data.findings.map(function (f) { return f.rule; });
+  assert.ok(rules.indexOf("xapi-actor-mbox-plain") !== -1,
+    "missing xapi-actor-mbox-plain: " + rules.join(","));
 });
 
 // ---------- runner ----------

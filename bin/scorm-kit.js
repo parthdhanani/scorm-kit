@@ -11,6 +11,7 @@ var SUBCOMMANDS = {
   i18n:  "../src/i18n/i18n-cli.js",
   mock:  "../src/mock/mock.js",
   rum:   "../src/rum/rum-cli.js",
+  privacy: "../src/privacy/privacy.js",
 };
 
 var HELP = [
@@ -25,6 +26,7 @@ var HELP = [
   "  i18n   <package> --strings ...  bundle a translation pack + runtime",
   "  mock   <package> [--port N]     local LMS runtime for testing",
   "  rum    <package> --endpoint ... inject real-user-monitoring runtime",
+  "  privacy <package>               PII / data-leak static audit",
   "",
   "Each command exits 0 on success, 1 on warnings, 2 on errors.",
   "Run `scorm-kit <command> --help` for command-specific options.",
