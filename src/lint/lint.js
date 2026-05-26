@@ -36,6 +36,7 @@
 var fs = require("fs");
 var path = require("path");
 var { execSync, spawnSync } = require("child_process");
+var verifyConfinement = require("../confine");
 
 var RULES = {
   errors: new Set([
@@ -80,6 +81,7 @@ function unzipToTemp(zipPath) {
   var tmp = fs.mkdtempSync(path.join(require("os").tmpdir(), "scorm-lint-"));
   var res = spawnSync("unzip", ["-q", "-o", zipPath, "-d", tmp]);
   if (res.status !== 0) throw new Error("Failed to unzip: " + (res.stderr && res.stderr.toString()));
+  verifyConfinement(tmp);
   return tmp;
 }
 
@@ -307,7 +309,7 @@ function main() {
 
   report(findings, opts);
 
-  if (tempDir) try { execSync('rm -rf "' + tempDir + '"'); } catch (e) {}
+  if (tempDir) try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) {}
 
   var counts = { error: 0, warn: 0 };
   findings.forEach(function (f) {

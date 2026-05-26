@@ -52,6 +52,7 @@ var fs = require("fs");
 var path = require("path");
 var os = require("os");
 var { spawnSync, execSync } = require("child_process");
+var verifyConfinement = require("../confine");
 
 // ---------- rules table ----------------------------------------------------
 
@@ -127,6 +128,7 @@ function unzipToTemp(zipPath) {
   var tmp = fs.mkdtempSync(path.join(os.tmpdir(), "scorm-a11y-"));
   var r = spawnSync("unzip", ["-q", "-o", zipPath, "-d", tmp]);
   if (r.status !== 0) throw new Error("unzip: " + r.stderr.toString());
+  verifyConfinement(tmp);
   return tmp;
 }
 
@@ -352,7 +354,7 @@ function main() {
   var root, cleanup = function () {};
   if (inputIsZip) {
     root = unzipToTemp(args.input);
-    cleanup = function () { try { execSync('rm -rf "' + root + '"'); } catch (e) {} };
+    cleanup = function () { try { fs.rmSync(root, { recursive: true, force: true }); } catch (e) {} };
   } else {
     root = path.resolve(args.input);
   }

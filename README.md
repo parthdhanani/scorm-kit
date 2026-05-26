@@ -37,7 +37,7 @@ Static analysis. Catches the classes of bug that Storyline's own publish step si
 
 ### `scorm-kit a11y <package>`
 
-WCAG 2.2 AA static audit of every HTML file in the package. Flags missing `lang`, missing `alt`, filename-as-alt, video without `<track>`, audio without transcript, heading-level skips, low-contrast inline styles, missing form labels, ARIA misuse. Static-analysis level, not a replacement for a manual audit — but catches 80% of the cheap regressions.
+WCAG 2.2 AA static audit of every HTML file in the package. Flags missing `lang`, missing `alt`, filename-as-alt, video without `<track>`, audio without transcript, heading-level skips, positive `tabindex`, missing form labels, ARIA misuse. Static-analysis level, not a replacement for a manual audit — but catches 80% of the cheap regressions.
 
 ### `scorm-kit diff <before> <after>`
 
@@ -54,6 +54,8 @@ A local SCORM 1.2 runtime — tiny HTTP server, iframe shell, full `window.API` 
 ### `scorm-kit rum <package> --endpoint <url>`
 
 Injects a Real User Monitoring runtime. Captures navigation timing, resource-load failures, JS errors, long tasks, and slide transitions; batches and POSTs as JSON beacons. The signal an LMS has never offered. Pair with `cmi.core.student_id` as the actor (or pseudonymise upstream).
+
+> **Note:** The `--token` value is embedded in plaintext inside the output SCORM package (`rum-config.js`). Anyone who unzips the package can read it. Use a scoped, rotatable token — not a master API key.
 
 ### `scorm-kit cmi5 <validate|lint|convert> <package>`
 

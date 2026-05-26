@@ -67,6 +67,7 @@ var fs = require("fs");
 var path = require("path");
 var os = require("os");
 var { spawnSync } = require("child_process");
+var verifyConfinement = require("../confine");
 
 // ---------- rules ----------------------------------------------------------
 
@@ -208,6 +209,7 @@ function unzipToTemp(zipPath) {
   var tmp = fs.mkdtempSync(path.join(os.tmpdir(), "scorm-privacy-"));
   var r = spawnSync("unzip", ["-q", "-o", zipPath, "-d", tmp]);
   if (r.status !== 0) throw new Error("unzip: " + r.stderr.toString());
+  verifyConfinement(tmp);
   return tmp;
 }
 

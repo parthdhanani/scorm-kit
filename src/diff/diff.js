@@ -24,6 +24,7 @@ var path = require("path");
 var os = require("os");
 var crypto = require("crypto");
 var { spawnSync, execSync } = require("child_process");
+var verifyConfinement = require("../confine");
 
 // ---------- args -----------------------------------------------------------
 
@@ -63,7 +64,8 @@ function unpack(input) {
   var tmp = fs.mkdtempSync(path.join(os.tmpdir(), "scorm-diff-"));
   var r = spawnSync("unzip", ["-q", "-o", input, "-d", tmp]);
   if (r.status !== 0) throw new Error("unzip " + input + ": " + r.stderr.toString());
-  return { root: tmp, cleanup: function () { try { execSync('rm -rf "' + tmp + '"'); } catch (e) {} } };
+  verifyConfinement(tmp);
+  return { root: tmp, cleanup: function () { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) {} } };
 }
 
 function walk(dir, acc, prefix) {

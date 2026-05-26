@@ -43,6 +43,7 @@ var fs = require("fs");
 var path = require("path");
 var os = require("os");
 var { spawnSync, execSync } = require("child_process");
+var verifyConfinement = require("../confine");
 
 // ---------- rules table ----------------------------------------------------
 
@@ -139,6 +140,7 @@ function unzipToTemp(zipPath, tag) {
   var tmp = fs.mkdtempSync(path.join(os.tmpdir(), "scorm-cmi5-" + (tag || "") + "-"));
   var r = spawnSync("unzip", ["-q", "-o", zipPath, "-d", tmp]);
   if (r.status !== 0) throw new Error("unzip: " + r.stderr.toString());
+  verifyConfinement(tmp);
   return tmp;
 }
 
@@ -417,8 +419,8 @@ function convertScormToCmi5(srcZip, dstZip) {
     throw new Error("source has no imsmanifest.xml — not a SCORM 1.2 package");
   }
   var manifest = fs.readFileSync(manifestPath, "utf8");
-  // crude: first resource href that ends in .html
-  var hrefMatch = manifest.match(/href\s*=\s*"([^"]+\.html?)"/i);
+  var hrefMatch = manifest.match(/<resource\b[^>]*\bscormtype\s*=\s*["']sco["'][^>]*\bhref\s*=\s*["']([^"']+)["']/i)
+               || manifest.match(/<resource\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*\bscormtype\s*=\s*["']sco["']/i);
   if (!hrefMatch) throw new Error("could not locate SCO launch HTML in imsmanifest.xml");
   var launchHref = hrefMatch[1];
 
@@ -456,7 +458,7 @@ function convertScormToCmi5(srcZip, dstZip) {
   if (r.status !== 0) throw new Error("zip: " + r.stderr.toString());
 
   // 5. clean up
-  try { execSync('rm -rf "' + src + '"'); } catch (e) {}
+  try { fs.rmSync(src, { recursive: true, force: true }); } catch (e) {}
 
   return { courseId: courseIri, auId: auIri, launchHref: launchHref, title: title };
 }
@@ -535,7 +537,7 @@ function main() {
       root = opts.pkg;
     } else {
       root = unzipToTemp(opts.pkg);
-      cleanup = function () { try { execSync('rm -rf "' + root + '"'); } catch (e) {} };
+      cleanup = function () { try { fs.rmSync(root, { recursive: true, force: true }); } catch (e) {} };
     }
   } catch (e) {
     console.error("cannot read package: " + e.message);

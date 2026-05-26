@@ -28,6 +28,7 @@ var os = require("os");
 var http = require("http");
 var url = require("url");
 var { spawnSync, execSync } = require("child_process");
+var verifyConfinement = require("../confine");
 
 // ---------- args ----------------------------------------------------------
 
@@ -72,6 +73,7 @@ function unzipToTemp(zipPath) {
   var tmp = fs.mkdtempSync(path.join(os.tmpdir(), "scorm-mock-"));
   var r = spawnSync("unzip", ["-q", "-o", zipPath, "-d", tmp]);
   if (r.status !== 0) throw new Error("unzip: " + r.stderr.toString());
+  verifyConfinement(tmp);
   return tmp;
 }
 
@@ -171,7 +173,7 @@ function main() {
   var st = fs.statSync(args.input);
   if (st.isFile()) {
     packageRoot = unzipToTemp(args.input);
-    cleanup = function () { try { execSync('rm -rf "' + packageRoot + '"'); } catch (e) {} };
+    cleanup = function () { try { fs.rmSync(packageRoot, { recursive: true, force: true }); } catch (e) {} };
   } else {
     packageRoot = path.resolve(args.input);
   }
