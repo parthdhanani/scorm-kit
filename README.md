@@ -9,7 +9,7 @@
 **An opinionated SCORM / cmi5 / xAPI build pipeline for teams that ship.** One CLI, eight subcommands, written because the existing ecosystem stops at "publish from Storyline and pray."
 
 ```bash
-npm install -g scorm-kit
+npm install -g github:parthdhanani/scorm-kit   # installs from source (not yet on npm)
 
 scorm-kit lint     course.zip    # static analysis: manifest, API, asset refs
 scorm-kit a11y     course.zip    # WCAG 2.2 AA static audit
