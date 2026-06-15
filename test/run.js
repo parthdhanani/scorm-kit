@@ -306,6 +306,37 @@ test("cmi5 lint: duplicate AU id fires lint-id-duplicate", function () {
   assert.ok(rules.indexOf("lint-id-duplicate") !== -1, "missing lint-id-duplicate: " + rules.join(","));
 });
 
+// ---------- report ----------
+
+test("report: --help exits 0 with usage", function () {
+  var r = run(["report", "--help"]);
+  assert.strictEqual(r.code, 0);
+  assert.ok(/health gate/.test(r.stdout), "help missing description");
+});
+
+test("report: missing package exits 2", function () {
+  var r = run(["report"]);
+  assert.strictEqual(r.code, 2);
+});
+
+test("report: clean fixture scores 100 and ships", function () {
+  var r = run(["report", ZIP_EN]);
+  assert.strictEqual(r.code, 0);
+  assert.ok(/100\/100/.test(r.stdout), "expected 100/100, got: " + r.stdout);
+  assert.ok(/ship-ready/.test(r.stdout));
+});
+
+test("report: --json aggregates the three gates with a score", function () {
+  var r = run(["report", ZIP_EN, "--json"]);
+  var d = JSON.parse(r.stdout);
+  assert.strictEqual(d.score, 100);
+  assert.strictEqual(d.verdict, "ship-ready");
+  ["lint", "a11y", "privacy"].forEach(function (g) {
+    assert.ok(d.passes[g], "missing gate " + g + " in passes");
+  });
+  assert.deepStrictEqual(d.totals, { error: 0, warn: 0, info: 0 });
+});
+
 // ---------- runner ----------
 
 var pass = 0, fail = 0;

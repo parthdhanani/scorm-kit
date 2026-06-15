@@ -13,6 +13,7 @@ var SUBCOMMANDS = {
   rum:   "../src/rum/rum-cli.js",
   privacy: "../src/privacy/privacy.js",
   cmi5: "../src/cmi5/cmi5.js",
+  report: "../src/report/report.js",
 };
 
 var HELP = [
@@ -29,6 +30,7 @@ var HELP = [
   "  rum    <package> --endpoint ... inject real-user-monitoring runtime",
   "  privacy <package>               PII / data-leak static audit",
   "  cmi5 validate|lint|convert ...  cmi5 package validator + SCORM→cmi5 wrapper",
+  "  report <package>                one health-gate score (lint + a11y + privacy)",
   "",
   "Each command exits 0 on success, 1 on warnings, 2 on errors.",
   "Run `scorm-kit <command> --help` for command-specific options.",

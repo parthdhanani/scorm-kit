@@ -3,10 +3,10 @@
 [![tests](https://github.com/parthdhanani/scorm-kit/actions/workflows/test.yml/badge.svg)](https://github.com/parthdhanani/scorm-kit/actions/workflows/test.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![node](https://img.shields.io/badge/node-%E2%89%A518-brightgreen.svg)](https://nodejs.org)
-[![tests](https://img.shields.io/badge/tests-27%2F27-brightgreen.svg)](test/run.js)
+[![tests](https://img.shields.io/badge/tests-31%2F31-brightgreen.svg)](test/run.js)
 [![runtime deps](https://img.shields.io/badge/runtime%20deps-0-brightgreen.svg)](package.json)
 
-**An opinionated SCORM / cmi5 / xAPI build pipeline for teams that ship.** One CLI, eight subcommands, written because the existing ecosystem stops at "publish from Storyline and pray."
+**An opinionated SCORM / cmi5 / xAPI build pipeline for teams that ship.** One CLI, nine subcommands, written because the existing ecosystem stops at "publish from Storyline and pray."
 
 ```bash
 npm install -g github:parthdhanani/scorm-kit   # installs from source (not yet on npm)
@@ -19,6 +19,7 @@ scorm-kit mock     course.zip    # local LMS for testing without Moodle
 scorm-kit rum      course.zip --endpoint https://rum.example.com/ingest   # inject RUM
 scorm-kit privacy  course.zip    # PII / data-leak static audit
 scorm-kit cmi5     validate|lint|convert ...   # cmi5 validator + SCORM→cmi5 wrapper
+scorm-kit report   course.zip    # one health-gate score: lint + a11y + privacy
 ```
 
 Exit codes are conventional: `0` clean, `1` warnings only, `2` errors. Every command supports `--json` for CI pipelines.
@@ -68,6 +69,21 @@ cmi5 is the 2016 ADL spec that replaces SCORM 1.2 for new builds — SCORM-style
 ### `scorm-kit privacy <package>`
 
 Static PII / data-leak audit. Catches the leaks a procurement-grade compliance review would flag and your courseware vendors won't tell you about: hard-coded emails, phone numbers, SSN/DOB patterns, third-party trackers (GA/GTM/Hotjar/FullStory/Mixpanel/Segment/Amplitude/etc.), font CDNs that set cookies, off-package iframes and form actions, bearer tokens and API keys checked into the bundle, S3 signed URLs, plaintext xAPI `mbox`, learner-id keys used as `localStorage` keys, and the classic `cmi.core.student_name → innerHTML` XSS vector. Allowlist your own LMS/CDN with `--allow lms.example.com,cdn.example.com`. Pair with `lint` and `a11y` in CI for an opinionated three-pass build gate.
+
+### `scorm-kit report <package>`
+
+One pre-upload health gate. Runs `lint`, `a11y`, and `privacy` in one pass, aggregates their findings into a single **Build Health score (0–100)**, and reports how many issues were caught before the package ever reached an LMS — because every one of them is a learner ticket you'd otherwise get two weeks later. Pure composition: it shells out to the three subcommands and adds no analysis of its own. Score model is deliberately simple and explainable — each error costs 10, each warning costs 3, floored at 0. `--json` for CI. Exit `0`/`1`/`2` as usual.
+
+```
+$ scorm-kit report course.zip
+
+  lint    ✗  1 error  5 warnings
+  a11y    ✗  2 errors  0 warnings
+  privacy ✓  0 errors  0 warnings
+
+  Build health: 55/100  (needs work)
+  8 issues caught before upload — each one a learner ticket you won't get in two weeks.
+```
 
 ## What scorm-kit is not
 
