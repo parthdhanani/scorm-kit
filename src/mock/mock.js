@@ -27,7 +27,7 @@ var path = require("path");
 var os = require("os");
 var http = require("http");
 var url = require("url");
-var { spawnSync, execSync } = require("child_process");
+var { spawnSync } = require("child_process");
 var verifyConfinement = require("../confine");
 
 // ---------- args ----------------------------------------------------------

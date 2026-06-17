@@ -12,7 +12,7 @@
 var fs = require("fs");
 var path = require("path");
 var os = require("os");
-var { spawnSync, execSync } = require("child_process");
+var { spawnSync } = require("child_process");
 var verifyConfinement = require("../confine");
 
 function parseArgs(argv) {

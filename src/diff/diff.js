@@ -23,7 +23,7 @@ var fs = require("fs");
 var path = require("path");
 var os = require("os");
 var crypto = require("crypto");
-var { spawnSync, execSync } = require("child_process");
+var { spawnSync } = require("child_process");
 var verifyConfinement = require("../confine");
 
 // ---------- args -----------------------------------------------------------

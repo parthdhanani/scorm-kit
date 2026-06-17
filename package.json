@@ -6,7 +6,13 @@
     "scorm-kit": "bin/scorm-kit.js"
   },
   "scripts": {
-    "test": "node test/run.js"
+    "test": "node test/run.js",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0"
   },
   "keywords": ["scorm", "scorm-1.2", "cmi5", "xapi", "elearning", "lms", "cli", "lint", "wcag", "a11y", "privacy", "learning-engineering"],
   "license": "MIT",

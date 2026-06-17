@@ -35,7 +35,7 @@
 
 var fs = require("fs");
 var path = require("path");
-var { execSync, spawnSync } = require("child_process");
+var { spawnSync } = require("child_process");
 var verifyConfinement = require("../confine");
 
 var RULES = {
@@ -114,8 +114,8 @@ function checkManifest(rootDir, files, findings) {
   }
 
   // schema
-  var schema = (xml.match(/<schema\s*>([^<]+)<\/schema>/) || [, ""])[1].trim();
-  var schemaVersion = (xml.match(/<schemaversion\s*>([^<]+)<\/schemaversion>/) || [, ""])[1].trim();
+  var schema = (xml.match(/<schema\s*>([^<]+)<\/schema>/) || ["", ""])[1].trim();
+  var schemaVersion = (xml.match(/<schemaversion\s*>([^<]+)<\/schemaversion>/) || ["", ""])[1].trim();
   if (schema !== "ADL SCORM" || !/^1\.2/.test(schemaVersion)) {
     findings.push(["manifest-no-schema",
       "schema=" + JSON.stringify(schema) + " schemaversion=" + JSON.stringify(schemaVersion) +
@@ -139,8 +139,8 @@ function checkManifest(rootDir, files, findings) {
   var primaryHref = null;
   resourceMatches.forEach(function (m) {
     var blob = m[0];
-    var typ = (blob.match(/adlcp:scormtype\s*=\s*"([^"]+)"/) || [, ""])[1];
-    var href = (blob.match(/href\s*=\s*"([^"]+)"/) || [, ""])[1];
+    var typ = (blob.match(/adlcp:scormtype\s*=\s*"([^"]+)"/) || ["", ""])[1];
+    var href = (blob.match(/href\s*=\s*"([^"]+)"/) || ["", ""])[1];
     if (typ === "sco" && href && !primaryHref) primaryHref = href;
     if (href) {
       if (!files.find(function (f) { return f.rel === href; })) {

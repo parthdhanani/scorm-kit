@@ -23,7 +23,6 @@ var FIX = path.resolve(__dirname, "../fixtures");
 
 var ZIP_EN = path.join(FIX, "posh-awareness.zip");
 var ZIP_HI = path.join(FIX, "posh-awareness-hi.zip");
-var ZIP_2  = path.join(FIX, "the-first-page.zip");
 
 function run(args, opts) {
   opts = opts || {};
