@@ -14,7 +14,20 @@
     "eslint": "^9.0.0",
     "globals": "^15.0.0"
   },
-  "keywords": ["scorm", "scorm-1.2", "cmi5", "xapi", "elearning", "lms", "cli", "lint", "wcag", "a11y", "privacy", "learning-engineering"],
+  "keywords": [
+    "scorm",
+    "scorm-1.2",
+    "cmi5",
+    "xapi",
+    "elearning",
+    "lms",
+    "cli",
+    "lint",
+    "wcag",
+    "a11y",
+    "privacy",
+    "learning-engineering"
+  ],
   "license": "MIT",
   "engines": {
     "node": ">=18"
@@ -28,5 +41,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/parthdhanani/scorm-kit"
+  },
+  "dependencies": {
+    "scorm-again": "^3.0.5"
   }
 }

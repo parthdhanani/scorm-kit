@@ -1,101 +1,94 @@
 /*
  * Mock SCORM 1.2 LMS — runs in the shell window, exposes window.API so the
- * course (in the iframe) finds it via parent-walking. Stores CMI state in
- * an in-memory tree, logs every call, persists to localStorage by package.
+ * course (in the iframe) finds it via parent-walking.
+ *
+ * SCORM 1.2 runtime powered by scorm-again (MIT © Jonathan Putney)
+ * https://github.com/jcputney/scorm-again
+ *
+ * This wrapper keeps the existing logging/fail-mode/UI layer and delegates
+ * all spec-compliance work to Scorm12API from scorm-again.
  */
 (function () {
   "use strict";
 
-  // SCORM 1.2 error codes (subset that matters in practice).
-  var ERR = {
-    OK: "0",
-    GENERAL: "101",
-    INVALID_ARG: "201",
-    ELEMENT_CANNOT_HAVE_CHILDREN: "202",
-    ELEMENT_NOT_ARRAY: "203",
-    NOT_INITIALIZED: "301",
-    NOT_IMPLEMENTED: "401",
-    READ_ONLY: "403",
-    WRITE_ONLY: "404",
-    INCORRECT_DATA_TYPE: "405",
-  };
-  var ERR_STRINGS = {
-    "0": "No error", "101": "General exception", "201": "Invalid argument error",
-    "202": "Element cannot have children", "203": "Element not an array",
-    "301": "Not initialized", "401": "Not implemented error",
-    "403": "Element is read-only", "404": "Element is write-only",
-    "405": "Incorrect data type",
-  };
-
-  // Default CMI 1.2 model (only the elements courses actually use).
-  function defaultCmi() {
-    return {
-      "cmi.core._children": "student_id,student_name,lesson_location,credit,lesson_status,entry,score,total_time,lesson_mode,exit,session_time",
-      "cmi.core.student_id": "mock-student",
-      "cmi.core.student_name": "Mock, Student",
-      "cmi.core.lesson_location": "",
-      "cmi.core.credit": "credit",
-      "cmi.core.lesson_status": "not attempted",
-      "cmi.core.entry": "",
-      "cmi.core.score._children": "raw,min,max",
-      "cmi.core.score.raw": "",
-      "cmi.core.score.min": "",
-      "cmi.core.score.max": "",
-      "cmi.core.total_time": "0000:00:00.00",
-      "cmi.core.lesson_mode": "normal",
-      "cmi.core.exit": "",
-      "cmi.core.session_time": "0000:00:00.00",
-      "cmi.suspend_data": "",
-      "cmi.launch_data": "",
-      "cmi.comments": "",
-      "cmi.comments_from_lms": "",
-      "cmi.objectives._count": "0",
-      "cmi.objectives._children": "id,score,status",
-      "cmi.student_data._children": "mastery_score,max_time_allowed,time_limit_action",
-      "cmi.student_preference._children": "audio,language,speed,text",
-      "cmi.interactions._count": "0",
-      "cmi.interactions._children": "id,objectives,time,type,correct_responses,weighting,student_response,result,latency",
-    };
-  }
-
-  // Write-permission map. Anything not in here = read-only.
-  var WRITABLE = new Set([
-    "cmi.core.lesson_location", "cmi.core.lesson_status", "cmi.core.exit",
-    "cmi.core.session_time", "cmi.core.score.raw", "cmi.core.score.min",
-    "cmi.core.score.max", "cmi.suspend_data", "cmi.comments",
-  ]);
-  // Dynamic-prefix writables (arrays): cmi.objectives.N.*, cmi.interactions.N.*
-  function isDynamicWritable(key) {
-    return /^cmi\.objectives\.\d+\.(id|score\.(raw|min|max)|status)$/.test(key) ||
-           /^cmi\.interactions\.\d+\.(id|objectives\.\d+\.id|time|type|correct_responses\.\d+\.pattern|weighting|student_response|result|latency)$/.test(key);
-  }
-
-  // ---------- state ------------------------------------------------------
-
   var state = {
-    initialized: false,
-    terminated: false,
-    cmi: defaultCmi(),
-    lastError: ERR.OK,
     log: [],
     failMode: "none",
     packageKey: location.search.slice(1) || "default",
   };
   var STORAGE_KEY = "mockLMS:" + state.packageKey;
+  var currentPresets = {};
+  var sapi = null;
 
-  function persist() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.cmi)); } catch (e) {}
-  }
-  function restore() {
+  // ---------- scorm-again integration ------------------------------------
+
+  // Methods we expose on window.API and intercept for logging + fail-mode.
+  var METHODS = [
+    "LMSInitialize", "LMSFinish", "LMSCommit",
+    "LMSGetValue", "LMSSetValue",
+    "LMSGetLastError", "LMSGetErrorString", "LMSGetDiagnostic",
+  ];
+  // Maps failMode value → method name that gets injected.
+  var FAIL_FOR = { init: "LMSInitialize", finish: "LMSFinish", commit: "LMSCommit", set: "LMSSetValue" };
+
+  function createSapi(presets) {
+    currentPresets = presets || {};
+    var instance = new window.Scorm12API({
+      sendFullCommit: false,
+      lmsCommitUrl: false,
+    });
+
+    // Restore saved CMI from localStorage (resume semantics).
     try {
-      var v = localStorage.getItem(STORAGE_KEY);
-      if (v) {
-        Object.assign(state.cmi, JSON.parse(v));
-        // SCORM 1.2 resume semantics: tell the course this is a resume so it
-        // knows to read suspend_data / lesson_location instead of starting fresh.
-        state.cmi["cmi.core.entry"] = "resume";
+      var saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        instance.loadFromJSON(JSON.parse(saved));
+        // Tell the course this is a resume so it reads suspend_data/lesson_location.
+        instance.loadFromFlattenedJSON({ "cmi.core.entry": "resume" });
       }
     } catch (e) {}
+
+    // Apply LMS defaults + CLI presets (presets override restore for the same key).
+    var defaults = {
+      "cmi.core.student_id": "mock-student",
+      "cmi.core.student_name": "Mock, Student",
+    };
+    instance.loadFromFlattenedJSON(Object.assign(defaults, currentPresets));
+
+    return instance;
+  }
+
+  function buildProxy(instance) {
+    var api = {};
+    METHODS.forEach(function (m) {
+      api[m] = function () {
+        var args = [].slice.call(arguments);
+
+        // Fail-mode injection: return "false" without calling scorm-again.
+        if (state.failMode !== "none" && FAIL_FOR[state.failMode] === m) {
+          logCall(m, args, "false", "101");
+          return "false";
+        }
+
+        var ret = instance[m].apply(instance, args);
+        var errCode = String(instance.lastErrorCode || "0");
+        logCall(m, args, ret, errCode);
+
+        if (m === "LMSInitialize" && ret === "true") setStateBadge("connected", "connected");
+        if (m === "LMSCommit"    && ret === "true") persistCmi();
+        if (m === "LMSFinish") {
+          if (ret === "true") persistCmi();
+          setStateBadge("terminated", "terminated");
+        }
+
+        return ret;
+      };
+    });
+    return api;
+  }
+
+  function persistCmi() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sapi.cmi)); } catch (e) {}
   }
 
   // ---------- log --------------------------------------------------------
@@ -119,13 +112,14 @@
   function appendLogRow(e) {
     if (!logEl) return;
     var li = document.createElement("li");
-    if (e.err && e.err !== ERR.OK) li.className = "err";
+    if (e.err && e.err !== "0") li.className = "err";
     var argText = e.args.map(function (a) { return JSON.stringify(a); }).join(", ");
     li.innerHTML =
-      '<span class="t">' + e.t + 's</span>' +
+      '<span class="t"></span>' +
       '<span class="m"></span>' +
       '<span class="a"></span>' +
       '<span class="r"></span>';
+    li.children[0].textContent = e.t + "s";
     li.children[1].textContent = e.method;
     li.children[2].textContent = argText;
     li.children[3].textContent = JSON.stringify(e.ret);
@@ -149,14 +143,12 @@
   }
 
   function renderCmi() {
-    if (!cmiEl) return;
-    // Skip the _children noise — show actual values only.
-    var lines = Object.keys(state.cmi).sort().filter(function (k) {
-      return !/_children$|_count$/.test(k);
-    }).map(function (k) {
-      return k + " = " + JSON.stringify(state.cmi[k]);
-    });
-    cmiEl.textContent = lines.join("\n");
+    if (!cmiEl || !sapi) return;
+    try {
+      cmiEl.textContent = JSON.stringify(JSON.parse(JSON.stringify(sapi.cmi)), null, 2);
+    } catch (e) {
+      cmiEl.textContent = String(e);
+    }
   }
 
   function setStateBadge(text, cls) {
@@ -165,106 +157,10 @@
     stateEl.className = "state " + (cls || "");
   }
 
-  // ---------- the SCORM 1.2 API surface ---------------------------------
-
-  function setLastError(code) { state.lastError = code; }
-
-  function lmsInit(s) {
-    if (state.failMode === "init") { setLastError(ERR.GENERAL); logCall("LMSInitialize", [s], "false", ERR.GENERAL); return "false"; }
-    if (state.initialized) { setLastError(ERR.GENERAL); logCall("LMSInitialize", [s], "false", ERR.GENERAL); return "false"; }
-    state.initialized = true;
-    state.terminated = false;
-    setStateBadge("connected", "connected");
-    setLastError(ERR.OK);
-    logCall("LMSInitialize", [s], "true", ERR.OK);
-    return "true";
-  }
-
-  function lmsFinish(s) {
-    if (state.failMode === "finish") { setLastError(ERR.GENERAL); logCall("LMSFinish", [s], "false", ERR.GENERAL); return "false"; }
-    if (!state.initialized) { setLastError(ERR.NOT_INITIALIZED); logCall("LMSFinish", [s], "false", ERR.NOT_INITIALIZED); return "false"; }
-    state.initialized = false; state.terminated = true;
-    persist();
-    setStateBadge("terminated", "terminated");
-    setLastError(ERR.OK);
-    logCall("LMSFinish", [s], "true", ERR.OK);
-    return "true";
-  }
-
-  function lmsCommit(s) {
-    if (state.failMode === "commit") { setLastError(ERR.GENERAL); logCall("LMSCommit", [s], "false", ERR.GENERAL); return "false"; }
-    if (!state.initialized) { setLastError(ERR.NOT_INITIALIZED); logCall("LMSCommit", [s], "false", ERR.NOT_INITIALIZED); return "false"; }
-    persist();
-    setLastError(ERR.OK);
-    logCall("LMSCommit", [s], "true", ERR.OK);
-    return "true";
-  }
-
-  function lmsGetValue(key) {
-    if (!state.initialized) { setLastError(ERR.NOT_INITIALIZED); logCall("LMSGetValue", [key], "", ERR.NOT_INITIALIZED); return ""; }
-    var v = state.cmi[key];
-    if (v == null) {
-      setLastError(ERR.NOT_IMPLEMENTED);
-      logCall("LMSGetValue", [key], "", ERR.NOT_IMPLEMENTED);
-      return "";
-    }
-    setLastError(ERR.OK);
-    logCall("LMSGetValue", [key], v, ERR.OK);
-    return String(v);
-  }
-
-  function lmsSetValue(key, value) {
-    if (state.failMode === "set") {
-      setLastError(ERR.GENERAL); logCall("LMSSetValue", [key, value], "false", ERR.GENERAL); return "false";
-    }
-    if (!state.initialized) {
-      setLastError(ERR.NOT_INITIALIZED); logCall("LMSSetValue", [key, value], "false", ERR.NOT_INITIALIZED); return "false";
-    }
-    // Auto-expand array _count on first interactions/objectives.N write.
-    var arr = /^cmi\.(interactions|objectives)\.(\d+)\./.exec(key);
-    if (arr) {
-      var countKey = "cmi." + arr[1] + "._count";
-      var idx = +arr[2];
-      var current = +(state.cmi[countKey] || "0");
-      if (idx >= current) state.cmi[countKey] = String(idx + 1);
-    }
-    if (!WRITABLE.has(key) && !isDynamicWritable(key)) {
-      // Known CMI elements that exist in defaultCmi but aren't writable are
-      // read-only (per SCORM 1.2 RTE) — surface that with err 403. Unknown
-      // keys still get NOT_IMPLEMENTED (401). Either way, we record the
-      // attempted value so the call shows up in the panel for debugging.
-      var code = (state.cmi[key] != null && !/_children$|_count$/.test(key))
-        ? ERR.READ_ONLY
-        : ERR.NOT_IMPLEMENTED;
-      state.cmi[key] = String(value);
-      setLastError(code);
-      logCall("LMSSetValue", [key, value], "false", code);
-      return "false";
-    }
-    state.cmi[key] = String(value);
-    setLastError(ERR.OK);
-    logCall("LMSSetValue", [key, value], "true", ERR.OK);
-    return "true";
-  }
-
-  function lmsGetLastError() { return state.lastError; }
-  function lmsGetErrorString(code) { return ERR_STRINGS[String(code)] || ""; }
-  function lmsGetDiagnostic(code) { return lmsGetErrorString(code); }
-
-  window.API = {
-    LMSInitialize: lmsInit,
-    LMSFinish: lmsFinish,
-    LMSCommit: lmsCommit,
-    LMSGetValue: lmsGetValue,
-    LMSSetValue: lmsSetValue,
-    LMSGetLastError: lmsGetLastError,
-    LMSGetErrorString: lmsGetErrorString,
-    LMSGetDiagnostic: lmsGetDiagnostic,
-  };
-
   // ---------- UI wiring -------------------------------------------------
 
   function el(id) { return document.getElementById(id); }
+
   function boot() {
     logEl = el("log");
     cmiEl = el("cmi");
@@ -273,20 +169,24 @@
     stateEl = el("state");
 
     el("restart").addEventListener("click", function () {
-      state.cmi = defaultCmi();
-      state.initialized = false; state.terminated = false;
-      state.log = []; state.lastError = ERR.OK;
+      state.log = []; state.failMode = "none";
       logEl.innerHTML = ""; updateCount();
-      persist(); renderCmi();
-      setStateBadge("disconnected", "");
       try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+      el("fail-mode").value = "none";
+      setStateBadge("disconnected", "");
+      sapi = createSapi(currentPresets);
+      window.API = buildProxy(sapi);
       el("course").src = el("course").src;
     });
+
     el("clear").addEventListener("click", function () {
       state.log = []; logEl.innerHTML = ""; updateCount();
     });
+
     el("export").addEventListener("click", function () {
-      var dump = { exportedAt: new Date().toISOString(), cmi: state.cmi, log: state.log };
+      var cmiSnap = {};
+      try { cmiSnap = JSON.parse(JSON.stringify(sapi ? sapi.cmi : {})); } catch (e) {}
+      var dump = { exportedAt: new Date().toISOString(), cmi: cmiSnap, log: state.log };
       var blob = new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" });
       var a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -294,12 +194,15 @@
       a.click();
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
     });
+
     el("fail-mode").addEventListener("change", function (e) {
       state.failMode = e.target.value;
     });
+
     filterEl.addEventListener("input", function () {
       [].forEach.call(logEl.children, applyFilter);
     });
+
     [].forEach.call(document.querySelectorAll(".tabs button"), function (b) {
       b.addEventListener("click", function () {
         document.querySelectorAll(".tabs button").forEach(function (x) { x.classList.remove("active"); });
@@ -312,17 +215,14 @@
 
     // Load config + boot the iframe.
     fetch("/config.json").then(function (r) { return r.json(); }).then(function (cfg) {
-      // Apply CMI presets BEFORE the course runs.
-      restore();
-      Object.keys(cfg.cmiPresets || {}).forEach(function (k) {
-        var fullKey = k.indexOf("cmi.") === 0 ? k : "cmi.core." + k;
-        state.cmi[fullKey] = cfg.cmiPresets[k];
-      });
+      sapi = createSapi(cfg.cmiPresets);
+      window.API = buildProxy(sapi);
+      el("fail-mode").value = cfg.fail || "none";
       state.failMode = cfg.fail || "none";
-      el("fail-mode").value = state.failMode;
       renderCmi();
       el("course").src = cfg.launchUrl;
     });
   }
+
   document.addEventListener("DOMContentLoaded", boot);
 })();

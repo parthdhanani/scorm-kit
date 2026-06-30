@@ -132,6 +132,9 @@ function startServer(args, packageRoot, launchHref, webDir) {
         fail: args.fail,
       }));
     }
+    if (p === "/vendor/scorm-again.js") {
+      return serveFile(require.resolve("scorm-again/dist/scorm12.min.js"), res);
+    }
     if (p.startsWith("/assets/")) {
       var asset = safeJoin(webDir, p.slice("/assets".length));
       if (!asset) { res.writeHead(403); return res.end("forbidden"); }

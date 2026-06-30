@@ -4,7 +4,7 @@
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![node](https://img.shields.io/badge/node-%E2%89%A518-brightgreen.svg)](https://nodejs.org)
 [![tests](https://img.shields.io/badge/tests-31%2F31-brightgreen.svg)](test/run.js)
-[![runtime deps](https://img.shields.io/badge/runtime%20deps-0-brightgreen.svg)](package.json)
+[![runtime deps](https://img.shields.io/badge/runtime%20deps-1-blue.svg)](package.json)
 
 **An opinionated SCORM / cmi5 / xAPI build pipeline for teams that ship.** One CLI, nine subcommands, written because the existing ecosystem stops at "publish from Storyline and pray."
 
@@ -23,6 +23,10 @@ scorm-kit report   course.zip    # one health-gate score: lint + a11y + privacy
 ```
 
 Exit codes are conventional: `0` clean, `1` warnings only, `2` errors. Every command supports `--json` for CI pipelines.
+
+## Attribution
+
+`scorm-kit mock` uses [scorm-again](https://github.com/jcputney/scorm-again) (MIT © Jonathan Putney) as its SCORM 1.2 runtime engine. scorm-again provides a full spec-compliant `window.API` implementation — the mock wraps it with a logging UI, fail-mode injection, and CLI configuration.
 
 ## Why this exists
 
