@@ -129,7 +129,7 @@ var COOKIE_BEARING_CDNS = [
 
 // Email — RFC-5322 lite. Excludes obvious noise (uuid@ patterns, foo@bar
 // where the LHS is all digits, etc.).
-var EMAIL_RE = /\b[A-Za-z][A-Za-z0-9._%+\-]{0,63}@[A-Za-z0-9][A-Za-z0-9.\-]{0,253}\.[A-Za-z]{2,24}\b/g;
+var EMAIL_RE = /\b[A-Za-z][A-Za-z0-9._%+-]{0,63}@[A-Za-z0-9][A-Za-z0-9.-]{0,253}\.[A-Za-z]{2,24}\b/g;
 
 // Common placeholders that should NOT trigger a finding — example.com,
 // localhost-ish things, schema URIs.
@@ -141,7 +141,7 @@ var EMAIL_PLACEHOLDER_DOMAINS = new Set([
 
 // Phones — keep narrow to avoid false-positives on version numbers, IDs.
 // Matches E.164-style ( +CC followed by 7-15 digits ) or NANP "(NXX) NXX-XXXX".
-var PHONE_RE = /(?:\+\d{1,3}[\s\-]?)?(?:\(\d{3}\)[\s\-]?|\d{3}[\s\-])\d{3}[\s\-]\d{4}\b/g;
+var PHONE_RE = /(?:\+\d{1,3}[\s-]?)?(?:\(\d{3}\)[\s-]?|\d{3}[\s-])\d{3}[\s-]\d{4}\b/g;
 var SSN_RE   = /\b\d{3}-\d{2}-\d{4}\b/g;
 var DOB_RE   = /\b(?:0?[1-9]|1[0-2])\/(?:0?[1-9]|[12]\d|3[01])\/(?:19|20)\d{2}\b/g;
 
@@ -155,12 +155,12 @@ var XAPI_ACTOR_STUDENT_ID_RE = /(["']name["']\s*:\s*[^,}]*cmi\.core\.student_id|
 var STUDENT_NAME_INNERHTML_RE = /(?:cmi\.core\.student_name|SCORM\.get\(["']cmi\.core\.student_name["']\))[^;\n]{0,120}\.innerHTML\s*=|\.innerHTML\s*=[^;\n]{0,120}(?:cmi\.core\.student_name|SCORM\.get\(["']cmi\.core\.student_name["']\))/g;
 
 // Bearer token (RFC 6750) — match the token shape, not the prefix alone.
-var BEARER_RE  = /\bBearer\s+([A-Za-z0-9_\-\.=]{20,})\b/g;
-var APIKEY_RE  = /\b(?:api[_-]?key|apikey|x[_-]?api[_-]?key)["'\s:=]+["']?([A-Za-z0-9_\-]{16,})["']?/gi;
+var BEARER_RE  = /\bBearer\s+([A-Za-z0-9_\-.=]{20,})\b/g;
+var APIKEY_RE  = /\b(?:api[_-]?key|apikey|x[_-]?api[_-]?key)["'\s:=]+["']?([A-Za-z0-9_-]{16,})["']?/gi;
 
 // Pre-signed URLs — AWS S3 and GCS shapes. Specific enough that false
 // positives on plain S3 URLs (without signed query) are rare.
-var S3_SIGNED_RE = /https?:\/\/[A-Za-z0-9.\-]+\.amazonaws\.com\/[^\s"'<>]+[?&](?:X-Amz-Signature|AWSAccessKeyId|Signature)=/g;
+var S3_SIGNED_RE = /https?:\/\/[A-Za-z0-9.-]+\.amazonaws\.com\/[^\s"'<>]+[?&](?:X-Amz-Signature|AWSAccessKeyId|Signature)=/g;
 var GCS_SIGNED_RE = /https?:\/\/storage\.googleapis\.com\/[^\s"'<>]+[?&](?:GoogleAccessId|Signature|X-Goog-Signature)=/g;
 
 // localStorage / sessionStorage writes of learner-shaped keys.
@@ -255,7 +255,7 @@ function lineOf(text, idx) {
 // ---------- host helpers ---------------------------------------------------
 
 function hostFromUrl(url) {
-  var m = /^(?:https?:)?\/\/([^\/\?\#"']+)/i.exec(url);
+  var m = /^(?:https?:)?\/\/([^/?#"']+)/i.exec(url);
   if (!m) return null;
   return m[1].toLowerCase().split(":")[0];
 }
@@ -353,7 +353,7 @@ function auditFile(absPath, relPath, text, args) {
   }
 
   // 8 + 9. Third-party trackers / cookie-bearing CDNs (URLs across all file types)
-  var urlRe = /https?:\/\/[A-Za-z0-9.\-]+(?:\/[^\s"'<>]*)?/g;
+  var urlRe = /https?:\/\/[A-Za-z0-9.-]+(?:\/[^\s"'<>]*)?/g;
   urlRe.lastIndex = 0;
   while ((m = urlRe.exec(text)) !== null) {
     var url = m[0];
