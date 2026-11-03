@@ -91,7 +91,7 @@ $ scorm-kit report course.zip
 
 ## What scorm-kit is not
 
-- A SCORM authoring tool. For that, see **[Storycraft](../storycraft)** — the Markdown→SCORM compiler that this toolkit was built around.
+- A SCORM authoring tool. For that, see **[Storycraft](https://github.com/parthdhanani/storycraft)** — the Markdown→SCORM compiler that this toolkit was built around.
 - A full WCAG audit. `a11y` is static analysis; manual testing is still required for compliance signoff.
 - A replacement for the LMS. `mock` is for development; production still ships to your real LMS.
 
@@ -100,13 +100,39 @@ $ scorm-kit report course.zip
 ```bash
 git clone https://github.com/parthdhanani/scorm-kit
 cd scorm-kit
-npm install        # zero runtime deps; install is just to populate node_modules cache
-npm test           # runs the test suite using fixture zips
+npm ci             # installs scorm-again (the mock runtime) + eslint for dev
+node bin/scorm-kit.js report fixtures/posh-awareness.zip   # try it on a bundled fixture
 ```
 
 ## Tests
 
-Each subcommand has 3–5 tests in `test/` that exercise it against the sample SCORM zips in `fixtures/` (built by Storycraft). Run them with `npm test`.
+Each subcommand has 3–5 tests in `test/` that exercise it against the sample SCORM zips in `fixtures/` (built by Storycraft). Everything runs offline: no LMS, no network.
+
+```bash
+npm test           # 31 tests, node test/run.js
+npm run lint       # eslint . (CI expects 0 errors, 0 warnings)
+```
+
+CI (`.github/workflows/test.yml`) runs lint on Node 22 and the test suite on Node 18, 20 and 22.
+
+## Architecture
+
+```
+bin/scorm-kit.js     CLI entry: dispatches `scorm-kit <command>` to src/<command>/
+src/confine.js       shared guard: rejects extracted files that escape the temp dir (zip-slip / symlinks)
+src/lint/            manifest, API-wrapper and asset-reference rules
+src/a11y/            WCAG 2.2 AA static checks over every HTML file
+src/diff/            semantic manifest diff + asset hashes + text line diff
+src/i18n/            translation-pack bundler + in-package language runtime
+src/mock/            local HTTP LMS (mock.js) + browser shell wrapping scorm-again (web/)
+src/rum/             RUM beacon runtime injector
+src/privacy/         PII / tracker / secret static audit
+src/cmi5/            cmi5.xml validator, interop linter, SCORM→cmi5 wrapper
+src/report/          composes lint + a11y + privacy into one 0–100 score
+fixtures/            sample SCORM 1.2 zips used by the tests
+```
+
+Each subcommand is one self-contained module; `report` adds no analysis of its own and only shells out to the other three.
 
 ## License
 
