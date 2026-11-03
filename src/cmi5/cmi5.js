@@ -182,14 +182,14 @@ function readXml(text) {
 }
 
 function rootEl(text) {
-  var m = text.match(/<([a-zA-Z][\w:\-]*)\b([^>]*)>/);
+  var m = text.match(/<([a-zA-Z][\w:-]*)\b([^>]*)>/);
   if (!m) return null;
   return { name: m[1], attrs: parseAttrs(m[2]), index: m.index };
 }
 
 function parseAttrs(s) {
   var out = {};
-  var re = /\b([\w:\-]+)\s*=\s*"([^"]*)"/g;
+  var re = /\b([\w:-]+)\s*=\s*"([^"]*)"/g;
   var m;
   while ((m = re.exec(s)) !== null) out[m[1]] = m[2];
   return out;
