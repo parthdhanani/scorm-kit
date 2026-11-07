@@ -147,6 +147,15 @@ test("mock: --help works without binding a port", function () {
   assert.ok(!/TypeError|ReferenceError/.test(r.stderr));
 });
 
+// mock.js serves this file at /vendor/scorm-again.js; scorm-again 3.x blocks
+// unexported deep paths, so the server crashed on that request.
+test("mock: scorm-again SCORM 1.2 build resolves via its exports map", function () {
+  var src = fs.readFileSync(path.join(__dirname, "..", "src", "mock", "mock.js"), "utf8");
+  var m = /require\.resolve\("(scorm-again[^"]*)"\)/.exec(src);
+  assert.ok(m, "mock.js resolves a scorm-again path");
+  assert.ok(fs.existsSync(require.resolve(m[1])));
+});
+
 // ---------- rum (smoke + dry run) ----------
 
 test("rum: missing --endpoint fails gracefully", function () {
